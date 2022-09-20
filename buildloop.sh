@@ -12,7 +12,7 @@
 PKGLIST="${1?specify a package list}"
 [ -r "${PKGLIST}" ] || exit 1
 
-: ${REPO:=hostdir/binpkgs/python3.10}
+: ${REPO:=hostdir/binpkgs/py311}
 : ${REPO_ARCH:=x86_64}
 
 mkdir -p "${REPO}"
@@ -47,7 +47,7 @@ while read -r pkg; do
     0) ;;
     2) ;;
     *)
-      sed -i '/checksum=/i broken="python3.10 temporary break"' srcpkgs/${pkg}/template
+      sed -i '/checksum=/i broken="python3.11 temporary break"' srcpkgs/${pkg}/template
       ;;
   esac
 done < "${PKGLIST}"

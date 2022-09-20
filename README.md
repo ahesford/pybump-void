@@ -122,9 +122,9 @@ how this can be automated for native and cross builds, one architecture at a
 time. The script makes some attempt to be dynamic, but still hard-codes some
 assumptions that will require customization. In particular, the script must be
 run with the root of the `void-packages` repo as the current working directory.
-It currently assumes that work is done on the `python3.10` git branch, although
-this only substantially affects the `$REPO` variable that can be overriddent in
-the environment. (It also affects the default `broken` message, but that isn't
+It currently assumes that work is done on the `py311` git branch, although this
+only substantially affects the `$REPO` variable that can be overriddent in the
+environment. (It also affects the default `broken` message, but that isn't
 really important.) The script has a *very* primitive check for existing
 packages in the local repository. If these packages are found, the script will
 skip rebuilding them. This should probably be made more robust!
