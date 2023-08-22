@@ -124,13 +124,14 @@ assumptions that will require customization. In particular, the script must be
 run with the root of the `void-packages` repo as the current working directory.
 It currently assumes that work is done on the `py311` git branch, although this
 only substantially affects the `$REPO` variable that can be overriddent in the
-environment. (It also affects the default `broken` message, but that isn't
-really important.) The script has a *very* primitive check for existing
-packages in the local repository. If these packages are found, the script will
-skip rebuilding them. This should probably be made more robust!
+environment or by setting the argument `-r $REPO`. (It also affects the default
+`broken` message, but that isn't really important.) The script has a *very*
+primitive check for existing packages in the local repository. If these
+packages are found, the script will skip rebuilding them. This should probably
+be made more robust!
 
 To build all packages for a specific architecture, define the `$REPO_ARCH`
-variable to one of the following values:
+variable (or set the argument `-a $REPO_ARCH`) to one of the following values:
 - `x86_64`
 - `x86_64-musl`
 - `aarch64`
@@ -145,11 +146,11 @@ These represent the official Void Linux architectures for which packages are
 built and distributed; other architectures may work with this script but are
 not tested. The script will attempt to pick a native architecture, which will
 be one of `x86_64`, `x86_64-musl`, `i686`, or `i686-musl`; any other
-architecture will rely on cross-compilation. You can define `$MASTERDIR` to
-point to an `xbps-src` build root; by default, one will be created in `/tmp`.
-(If you mount a `tmpfs` at `/tmp`, this is probably not desirable unless you
-have at least 64 GB of RAM; some dependants, like `libreoffice`, can be pretty
-big.)
+architecture will rely on cross-compilation. You can define `$MASTERDIR` or set
+the argument `-m $MASTERDIR` to point to an `xbps-src` build root; by default,
+one will be created in `/tmp`.  (If you mount a `tmpfs` at `/tmp`, this is
+probably not desirable unless you have at least 64 GB of RAM; some dependants,
+like `libreoffice`, can be pretty big.)
 
 With `$REPO_ARCH` set (as well as any other appropriate environment variables),
 start a build with
@@ -162,3 +163,8 @@ Any unexpected failure will cause the corresponding template to be marked
 broken, which allows for easy identification with the command `git status` or
 `git diff --name-only`. Work through the broken templates, removing the
 `broken=` line and fixing whatever is necessary for that package.
+
+In some cases, it may be desirable to terminate a build loop when a package
+fails to build rather than marking the package broken and continuing the loop.
+To do so, either pass the `-x` argument to `buildloop.sh` or set the
+environment variable `$PYBUMP_ERRORS_FAIL` to any non-empty value.

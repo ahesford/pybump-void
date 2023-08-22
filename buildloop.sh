@@ -45,13 +45,49 @@ get_needed_version() {
   echo "${PKGVER}"
 }
 
+usage() {
+  cat <<-EOF
+	USAGE: $0 [-h] [-a <arch>] [-m <masterdir>]
+	       [-r <repo>] [-n <repo-nonfree>] [-x]
+	EOF
+}
+
+while getopts "ha:m:r:n:x" opt; do
+  case "${opt}" in
+    a)
+      REPO_ARCH="${OPTARG}"
+      ;;
+    m)
+      MASTERDIR="${OPTARG}"
+      ;;
+    r)
+      REPO="${OPTARG}"
+      ;;
+    n)
+      REPO_NONFREE="${OPTARG}"
+      ;;
+    x)
+      PYBUMP_ERRORS_FAIL="yes"
+      ;;
+    h)
+      usage
+      exit 0
+      ;;
+    *)
+      usage
+      exit 1
+      ;;
+  esac
+done
+
+shift "$((OPTIND - 1))"
+
+[ -n "${REPO}" ] ||  REPO="hostdir/binpkgs/py311"
+[ -n "${REPO_ARCH}" ] || REPO_ARCH=x86_64
+[ -n "${REPO_NONFREE}" ] || REPO_NONFREE="${REPO}/nonfree"
+
 PKGLIST="${1?specify a package list}"
 [ -r "${PKGLIST}" ] || exit 1
-
-: ${REPO:=hostdir/binpkgs/py311}
-: ${REPO_NONFREE:=${REPO}/nonfree}
-
-: ${REPO_ARCH:=x86_64}
 
 case "${REPO_ARCH}" in
   i686) ROOT_ARCH="i686" ;;
@@ -60,27 +96,28 @@ case "${REPO_ARCH}" in
   *) ROOT_ARCH="x86_64" ;;
 esac
 
+[ -n "${MASTERDIR}" ] || MASTERDIR=/tmp/masterdir.${ROOT_ARCH}
+
+./xbps-src -m "${MASTERDIR}" binary-bootstrap "${ROOT_ARCH}"
+./xbps-src -m "${MASTERDIR}" bootstrap-update
+
 case "${REPO_ARCH}" in
   i686*|x86_64*) ARCH_OPT=() ;;
   *) ARCH_OPT=( "-a" "${REPO_ARCH}" ) ;;
 esac
-
-: ${MASTERDIR:=/tmp/masterdir.${ROOT_ARCH}}
-./xbps-src -m "${MASTERDIR}" binary-bootstrap "${ROOT_ARCH}"
-./xbps-src -m "${MASTERDIR}" bootstrap-update
 
 while read -r pkg; do
   # Try to find the package in the local repos
   if HAVE_PKGVER=$(get_local_version "${pkg}" "${REPO_ARCH}" "${REPO}" "${REPO_NONFREE}"); then
     if NEED_PKGVER=$(get_needed_version "${pkg}"); then
       if xbps-uhelper cmpver "${HAVE_PKGVER}" "${NEED_PKGVER}"; then
-        echo "SKIPPING $pkg, VERSION ${NEED_PKGVER} already exists" && continue
+        echo "SKIPPING ${pkg}, VERSION ${NEED_PKGVER} already exists" && continue
       fi
     fi
   fi
 
   ./xbps-src -m "${MASTERDIR}" clean
-  ./xbps-src -m "${MASTERDIR}" "${ARCH_OPT[@]}" -f pkg $pkg
+  ./xbps-src -m "${MASTERDIR}" "${ARCH_OPT[@]}" -f pkg "${pkg}"
 
   ret=$?
   case "$ret" in
@@ -91,7 +128,7 @@ while read -r pkg; do
         echo "ERROR: failed to build ${pkg}"
         exit $ret
       else
-        sed -i '/checksum=/i broken="python3.11 temporary break"' srcpkgs/${pkg}/template
+        sed -i '/checksum=/i broken="python3.11 temporary break"' "srcpkgs/${pkg}/template"
       fi
       ;;
   esac
