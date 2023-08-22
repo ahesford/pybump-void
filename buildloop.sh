@@ -87,7 +87,12 @@ while read -r pkg; do
     0) ;;
     2) ;;
     *)
-      sed -i '/checksum=/i broken="python3.11 temporary break"' srcpkgs/${pkg}/template
+      if [ -n "${PYBUMP_ERRORS_FAIL}" ]; then
+        echo "ERROR: failed to build ${pkg}"
+        exit $ret
+      else
+        sed -i '/checksum=/i broken="python3.11 temporary break"' srcpkgs/${pkg}/template
+      fi
       ;;
   esac
 done < "${PKGLIST}"
