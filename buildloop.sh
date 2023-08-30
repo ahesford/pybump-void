@@ -47,12 +47,41 @@ get_needed_version() {
 
 usage() {
   cat <<-EOF
-	USAGE: $0 [-h] [-a <arch>] [-m <masterdir>]
-	       [-r <repo>] [-n <repo-nonfree>] [-x]
+	USAGE: $0 [options...] <pkglist>
+	
+	Build all packages in the given list not already in a local repo
+	
+	OPTIONS
+	
+	-h
+	   Display this help message and exit
+	
+	-a <arch>
+	   Build packages for the specified arch
+	   (default: x86_64)
+	
+	-m <masterdir>
+	   Use the specified masterdir
+	   (default: /tmp/masterdir.\${ARCH})
+	
+	-r <repo>
+	   Look in the named repo for existing packages
+	   (default: xbps-src default for current branch)
+	
+	-n <repo>
+	   Look in the named repo for existing non-free packages
+	   (default: \${REPO}/nonfree)
+	
+	-v <void-packages>
+	   Use the given void-packages repository
+	   (default: \$(xdistdir) if possible, otherwise \$PWD)
+	
+	-x
+	   Fail on package failure instead of marking broken
 	EOF
 }
 
-while getopts "ha:m:r:n:x" opt; do
+while getopts "ha:m:r:n:v:x" opt; do
   case "${opt}" in
     a)
       REPO_ARCH="${OPTARG}"
@@ -65,6 +94,9 @@ while getopts "ha:m:r:n:x" opt; do
       ;;
     n)
       REPO_NONFREE="${OPTARG}"
+      ;;
+    v)
+      XBPS_DISTDIR="${OPTARG}"
       ;;
     x)
       PYBUMP_ERRORS_FAIL="yes"
@@ -82,7 +114,31 @@ done
 
 shift "$((OPTIND - 1))"
 
-[ -n "${REPO}" ] ||  REPO="hostdir/binpkgs/py311"
+if [ ! -d "${XBPS_DISTDIR}" ]; then
+  # Try to find a default void-packages repository
+  XBPS_DISTDIR=$(xdistdir 2>/dev/null) || XBPS_DISTDIR=""
+  [ -d "${XBPS_DISTDIR}" ] || XBPS_DISTDIR="${PWD}"
+fi
+
+# Always run from $XBPS_DISTDIR
+cd "${XBPS_DISTDIR}" || exit 1
+if ! command -v ./xbps-src >/dev/null 2>&1; then
+  echo "ERROR: failed to find xbps-src"
+  exit 1
+fi
+
+if [ -z "${REPO}" ]; then
+  if ! BRANCH="$(git rev-parse --abbrev-ref HEAD)"; then
+    echo "ERROR: failed to determine branch"
+    exit 1
+  fi
+
+  case "${BRANCH}" in
+    master) REPO="${PWD}/hostdir/binpkgs" ;;
+    *) REPO="${PWD}/hostdir/binpkgs/${BRANCH}" ;;
+  esac
+fi
+
 [ -n "${REPO_ARCH}" ] || REPO_ARCH=x86_64
 [ -n "${REPO_NONFREE}" ] || REPO_NONFREE="${REPO}/nonfree"
 
@@ -128,8 +184,8 @@ while read -r pkg; do
         echo "ERROR: failed to build ${pkg}"
         exit $ret
       else
-        sed -i '/checksum=/i broken="python3.11 temporary break"' "srcpkgs/${pkg}/template"
+        sed -i '/checksum=/i broken="pybump temporary break"' "srcpkgs/${pkg}/template"
       fi
       ;;
   esac
-done < "${PKGLIST}"
+done < <( xargs ./xbps-src sort-dependencies < "${PKGLIST}" )
