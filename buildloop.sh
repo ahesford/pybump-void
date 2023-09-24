@@ -78,10 +78,14 @@ usage() {
 	
 	-x
 	   Fail on package failure instead of marking broken
+	
+	-S
+	   Do not sort package list; build in order listed in file
 	EOF
 }
 
-while getopts "ha:m:r:n:v:x" opt; do
+PRESORTED_PKGS=
+while getopts "ha:m:r:n:v:xS" opt; do
   case "${opt}" in
     a)
       REPO_ARCH="${OPTARG}"
@@ -100,6 +104,9 @@ while getopts "ha:m:r:n:v:x" opt; do
       ;;
     x)
       PYBUMP_ERRORS_FAIL="yes"
+      ;;
+    S)
+      PRESORTED_PKGS="yes"
       ;;
     h)
       usage
@@ -162,6 +169,13 @@ case "${REPO_ARCH}" in
   *) ARCH_OPT=( "-a" "${REPO_ARCH}" ) ;;
 esac
 
+PACKAGES=
+if [ -n "${PRESORTED_PKGS}" ]; then
+  PACKAGES=$(cat "${PKGLIST}")
+else
+  PACKAGES=$(xargs ./xbps-src sort-dependencies < "${PKGLIST}")
+fi
+
 while read -r pkg; do
   # Try to find the package in the local repos
   if HAVE_PKGVER=$(get_local_version "${pkg}" "${REPO_ARCH}" "${REPO}" "${REPO_NONFREE}"); then
@@ -188,4 +202,4 @@ while read -r pkg; do
       fi
       ;;
   esac
-done < <( xargs ./xbps-src sort-dependencies < "${PKGLIST}" )
+done <<< "${PACKAGES}"
