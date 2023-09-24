@@ -155,7 +155,7 @@ like `libreoffice`, can be pretty big.)
 With `$REPO_ARCH` set (as well as any other appropriate environment variables),
 start a build with
 ```sh
-buildroot.sh pkgs.depsorted 2>&1 | tee -a "log.${REPO_ARCH}"
+buildloop.sh pkgs.depsorted 2>&1 | tee -a "log.${REPO_ARCH}"
 ```
 Note that the output is captured for easy review later. The script will happily
 ignore any packages marked broken or otherwise unbuildable for an architecture.
