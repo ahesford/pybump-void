@@ -169,14 +169,18 @@ case "${REPO_ARCH}" in
   *) ARCH_OPT=( "-a" "${REPO_ARCH}" ) ;;
 esac
 
-PACKAGES=
+PACKAGES=( )
 if [ -n "${PRESORTED_PKGS}" ]; then
-  PACKAGES=$(cat "${PKGLIST}")
+  while read -r pkg; do
+    PACKAGES+=( "${pkg}" )
+  done < "${PKGLIST}"
 else
-  PACKAGES=$(xargs ./xbps-src sort-dependencies < "${PKGLIST}")
+  while read -r pkg; do
+    PACKAGES+=( "${pkg}" )
+  done < <(xargs ./xbps-src sort-dependencies < "${PKGLIST}")
 fi
 
-while read -r pkg; do
+for pkg in "${PACKAGES[@]}"; do
   # Try to find the package in the local repos
   if HAVE_PKGVER=$(get_local_version "${pkg}" "${REPO_ARCH}" "${REPO}" "${REPO_NONFREE}"); then
     if NEED_PKGVER=$(get_needed_version "${pkg}"); then
@@ -202,4 +206,4 @@ while read -r pkg; do
       fi
       ;;
   esac
-done <<< "${PACKAGES}"
+done
