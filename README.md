@@ -89,7 +89,7 @@ Finally, include all packages that install files in paths matching
 `usr/lib/python3`, which will capture all packages with modules in the standard
 location:
 ```sh
-xlocate usr/lib/python3 | cut -f1 | sort | uniq | \
+xlocate usr/lib/python3 | awk '{print $1}' | sort | uniq | \
     xargs -n1 xbps-uhelper getpkgname | \
     xargs -n1 xsubpkg -m | sort | uniq >> pkgs.combined
 ```
