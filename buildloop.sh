@@ -72,6 +72,9 @@ usage() {
 	   Look in the named repo for existing non-free packages
 	   (default: \${REPO}/nonfree)
 	
+	-t
+	   Use a temporary masterdir with xbps-src
+	
 	-v <void-packages>
 	   Use the given void-packages repository
 	   (default: \$(xdistdir) if possible, otherwise \$PWD)
@@ -84,8 +87,9 @@ usage() {
 	EOF
 }
 
+TEMP_OVERLAY=
 PRESORTED_PKGS=
-while getopts "ha:m:r:n:v:xS" opt; do
+while getopts "ha:m:r:n:tv:xS" opt; do
   case "${opt}" in
     a)
       REPO_ARCH="${OPTARG}"
@@ -98,6 +102,9 @@ while getopts "ha:m:r:n:v:xS" opt; do
       ;;
     n)
       REPO_NONFREE="${OPTARG}"
+      ;;
+    t)
+      TEMP_OVERLAY="yes"
       ;;
     v)
       XBPS_DISTDIR="${OPTARG}"
@@ -159,7 +166,13 @@ case "${REPO_ARCH}" in
   *) ROOT_ARCH="x86_64" ;;
 esac
 
-[ -n "${MASTERDIR}" ] || MASTERDIR=/tmp/masterdir.${ROOT_ARCH}
+if [ -z "${MASTERDIR}" ]; then
+  if [ -z "${TEMP_OVERLAY}" ]; then
+    MASTERDIR=/tmp/masterdir.${ROOT_ARCH}
+  else
+    MASTERDIR="${XBPS_DISTDIR}/masterdir-${ROOT_ARCH}"
+  fi
+fi
 
 ./xbps-src -m "${MASTERDIR}" -A "${ROOT_ARCH}" binary-bootstrap
 ./xbps-src -m "${MASTERDIR}" bootstrap-update
@@ -190,8 +203,8 @@ for pkg in "${PACKAGES[@]}"; do
     fi
   fi
 
-  ./xbps-src -m "${MASTERDIR}" clean
-  ./xbps-src -m "${MASTERDIR}" "${ARCH_OPT[@]}" -f pkg "${pkg}"
+  [ -z "${TEMP_OVERLAY}" ] && ./xbps-src -m "${MASTERDIR}" clean
+  ./xbps-src ${TEMP_OVERLAY:+-t} -m "${MASTERDIR}" "${ARCH_OPT[@]}" -f pkg "${pkg}"
 
   ret=$?
   case "$ret" in
