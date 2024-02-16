@@ -161,7 +161,7 @@ esac
 
 [ -n "${MASTERDIR}" ] || MASTERDIR=/tmp/masterdir.${ROOT_ARCH}
 
-./xbps-src -m "${MASTERDIR}" binary-bootstrap "${ROOT_ARCH}"
+./xbps-src -m "${MASTERDIR}" -A "${ROOT_ARCH}" binary-bootstrap
 ./xbps-src -m "${MASTERDIR}" bootstrap-update
 
 case "${REPO_ARCH}" in
