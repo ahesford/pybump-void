@@ -71,7 +71,11 @@ usage() {
 	-n <repo>
 	   Look in the named repo for existing non-free packages
 	   (default: \${REPO}/nonfree)
-	
+
+	-b <repo>
+	   Look in the named repo for existing bootstrap packages
+	   (default: \${REPO}/bootstrap)
+
 	-t
 	   Use a temporary masterdir with xbps-src
 	
@@ -89,7 +93,7 @@ usage() {
 
 TEMP_OVERLAY=
 PRESORTED_PKGS=
-while getopts "ha:m:r:n:tv:xS" opt; do
+while getopts "ha:m:r:n:b:tv:xS" opt; do
   case "${opt}" in
     a)
       REPO_ARCH="${OPTARG}"
@@ -102,6 +106,9 @@ while getopts "ha:m:r:n:tv:xS" opt; do
       ;;
     n)
       REPO_NONFREE="${OPTARG}"
+      ;;
+    b)
+      REPO_BOOTSTRAP="${OPTARG}"
       ;;
     t)
       TEMP_OVERLAY="yes"
@@ -155,6 +162,7 @@ fi
 
 [ -n "${REPO_ARCH}" ] || REPO_ARCH=x86_64
 [ -n "${REPO_NONFREE}" ] || REPO_NONFREE="${REPO}/nonfree"
+[ -n "${REPO_BOOTSTRAP}" ] || REPO_BOOTSTRAP="${REPO}/bootstrap"
 
 PKGLIST="${1?specify a package list}"
 [ -r "${PKGLIST}" ] || exit 1
@@ -193,9 +201,11 @@ else
   done < <(xargs ./xbps-src sort-dependencies < "${PKGLIST}")
 fi
 
+SEARCH_REPOS=("${REPO}" "${REPO_NONFREE}" "${REPO_BOOTSTRAP}")
+
 for pkg in "${PACKAGES[@]}"; do
   # Try to find the package in the local repos
-  if HAVE_PKGVER=$(get_local_version "${pkg}" "${REPO_ARCH}" "${REPO}" "${REPO_NONFREE}"); then
+  if HAVE_PKGVER=$(get_local_version "${pkg}" "${REPO_ARCH}" "${SEARCH_REPOS[@]}"); then
     if NEED_PKGVER=$(get_needed_version "${pkg}"); then
       if xbps-uhelper cmpver "${HAVE_PKGVER}" "${NEED_PKGVER}"; then
         echo "SKIPPING ${pkg}, VERSION ${NEED_PKGVER} already exists" && continue
